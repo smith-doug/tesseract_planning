@@ -72,6 +72,8 @@ std::vector<descartes_light::StateSample<FloatType>> DescartesRobotSampler<Float
   // Generate all possible Cartesian poses
   tesseract_common::VectorIsometry3d target_poses = target_pose_sampler_(target_pose_);
 
+  bool found_ik_sol = false;
+
   // Generate the IK solutions for those poses
   std::vector<descartes_light::StateSample<FloatType>> samples;
   for (const auto& pose : target_poses)
@@ -85,6 +87,8 @@ std::vector<descartes_light::StateSample<FloatType>> DescartesRobotSampler<Float
 
     if (ik_solutions.empty())
       continue;
+
+    found_ik_sol = true;
 
     // Check each individual joint solution
     for (const auto& sol : ik_solutions)
@@ -111,7 +115,23 @@ std::vector<descartes_light::StateSample<FloatType>> DescartesRobotSampler<Float
   }
 
   if (samples.empty())
+  {
+    Eigen::Isometry3d first_pose = target_poses.front();
+    Eigen::Isometry3d first_pose_offset = first_pose * tcp_offset_.inverse();
+    std::stringstream ss;
+    ss << "Descartes vertex failure: ";
+    if (!found_ik_sol)
+      ss << "No IK solutions were found. ";
+    else
+      ss << "All IK solutions found were in collision or invalid. ";
+    ss << target_poses.size() << " samples tried from target pose" << std::endl;
+    ss << "\ttarget pose translation: (" << target_pose_.translation().x() << ", " << target_pose_.translation().y() << ", " << target_pose_.translation().z() << ")" << std::endl;;
+    ss << "\tfirst pose translation: (" << first_pose.translation().x() << ", " << first_pose.translation().y() << ", " << first_pose.translation().z() << ")" << std::endl;;
+    ss << "\tfirst pose translation offset: (" << first_pose_offset.translation().x() << ", " << first_pose_offset.translation().y() << ", " << first_pose_offset.translation().z() << ")" << std::endl;;
+    ss << "\tworking frame: '" << target_working_frame_ << "', tcp: '" << tcp_frame_ << "'";
+    CONSOLE_BRIDGE_logDebug(ss.str().c_str());
     return samples;
+  }
 
   if (allow_collision_)
   {
