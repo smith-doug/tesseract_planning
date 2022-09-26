@@ -73,11 +73,15 @@ std::vector<descartes_light::StateSample<FloatType>> DescartesRobotSampler<Float
   tesseract_common::VectorIsometry3d target_poses = target_pose_sampler_(target_pose_);
 
   bool found_ik_sol = false;
+  std::stringstream error_string_stream;
 
   // Generate the IK solutions for those poses
   std::vector<descartes_light::StateSample<FloatType>> samples;
-  for (const auto& pose : target_poses)
+//  for (const auto& pose : target_poses)
+  for (std::size_t i = 0; i < target_poses.size(); i++)
   {
+    const auto& pose = target_poses[i];
+
     // Get the transformation to the kinematic tip link
     Eigen::Isometry3d target_pose = pose * tcp_offset_.inverse();
 
@@ -88,11 +92,15 @@ std::vector<descartes_light::StateSample<FloatType>> DescartesRobotSampler<Float
     if (ik_solutions.empty())
       continue;
 
+    tesseract_collision::ContactTrajectoryResults traj_contacts(manip_->getJointNames(), ik_solutions.size());
+
     found_ik_sol = true;
 
     // Check each individual joint solution
-    for (const auto& sol : ik_solutions)
+    for (std::size_t j = 0; j < ik_solutions.size(); j++)
     {
+      const auto& sol = ik_solutions[j];
+
       if ((is_valid_ != nullptr) && !(*is_valid_)(sol))
         continue;
 
@@ -103,7 +111,21 @@ std::vector<descartes_light::StateSample<FloatType>> DescartesRobotSampler<Float
       }
       else if (!allow_collision_)
       {
-        if (collision_->validate(sol))
+        if (console_bridge::getLogLevel() == console_bridge::LogLevel::CONSOLE_BRIDGE_LOG_DEBUG)
+        {
+          tesseract_collision::ContactResultMap coll_results = collision_->detailed_validate(sol);
+          if (!coll_results.empty())
+          {
+            tesseract_collision::ContactTrajectoryStepResults step_contacts(j, sol, sol, 1);
+            tesseract_collision::ContactTrajectorySubstepResults substep_contacts(1, sol);
+            substep_contacts.contacts = coll_results;
+            step_contacts.substeps[0] = substep_contacts;
+            traj_contacts.steps[j] = step_contacts;
+          }
+          else
+            samples.push_back(descartes_light::StateSample<FloatType>{ state, 0.0 });
+        }
+        else if (collision_->validate(sol))
           samples.push_back(descartes_light::StateSample<FloatType>{ state, 0.0 });
       }
       else
@@ -111,6 +133,13 @@ std::vector<descartes_light::StateSample<FloatType>> DescartesRobotSampler<Float
         const FloatType cost = static_cast<FloatType>(collision_->distance(sol));
         samples.push_back(descartes_light::StateSample<FloatType>{ state, cost });
       }
+    }
+
+    if (console_bridge::getLogLevel() == console_bridge::LogLevel::CONSOLE_BRIDGE_LOG_DEBUG)
+    {
+      error_string_stream << "For sample " << i << " the target position is:" << std::endl << target_pose.matrix() << std::endl;
+      error_string_stream << ik_solutions.size() << " IK solutions were found, with a collision summary of:" << std::endl;
+      error_string_stream << traj_contacts.trajectoryCollisionResultsTable().str();
     }
   }
 
@@ -126,10 +155,11 @@ std::vector<descartes_light::StateSample<FloatType>> DescartesRobotSampler<Float
       ss << "All IK solutions found were in collision or invalid. ";
     ss << target_poses.size() << " samples tried from target pose" << std::endl;
     ss << "\ttarget pose translation: (" << target_pose_.translation().x() << ", " << target_pose_.translation().y() << ", " << target_pose_.translation().z() << ")" << std::endl;;
-    ss << "\tfirst pose translation: (" << first_pose.translation().x() << ", " << first_pose.translation().y() << ", " << first_pose.translation().z() << ")" << std::endl;;
-    ss << "\tfirst pose translation offset: (" << first_pose_offset.translation().x() << ", " << first_pose_offset.translation().y() << ", " << first_pose_offset.translation().z() << ")" << std::endl;;
-    ss << "\tworking frame: '" << target_working_frame_ << "', tcp: '" << tcp_frame_ << "'";
-    CONSOLE_BRIDGE_logDebug(ss.str().c_str());
+    ss << "\tworking frame: '" << target_working_frame_ << "', tcp: '" << tcp_frame_ << "'" << std::endl;
+    if (found_ik_sol)
+      ss << error_string_stream.str();
+    if (console_bridge::getLogLevel() == console_bridge::LogLevel::CONSOLE_BRIDGE_LOG_DEBUG)
+      std::cout << ss.str();
     return samples;
   }
 

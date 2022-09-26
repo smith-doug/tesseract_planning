@@ -62,7 +62,34 @@ bool DescartesCollision::validate(const Eigen::Ref<const Eigen::VectorXd>& pos)
   config.contact_request.type = tesseract_collision::ContactTestType::FIRST;
   tesseract_collision::ContactResultMap results =
       tesseract_environment::checkTrajectoryState(*contact_manager_, state, config);
+
+//  if (console_bridge::getLogLevel() == console_bridge::LogLevel::CONSOLE_BRIDGE_LOG_INFO && !results.empty())
+//  {
+//    tesseract_collision::ContactTrajectoryResults traj_contacts(manip_->getJointNames(), 1);
+//    tesseract_collision::ContactTrajectoryStepResults step_contacts(1, pos);
+//    tesseract_collision::ContactTrajectorySubstepResults substep_contacts(1, pos);
+//    substep_contacts.contacts = results;
+//    step_contacts.substeps[0] = substep_contacts;
+//    traj_contacts.steps[0] = step_contacts;
+//    if (traj_contacts.numContacts() > 0)
+//      std::cout << "DESCARTES SAMPLE COLLISION SUMMARY:\n" << traj_contacts.trajectoryCollisionResultsTable().str();
+//  }
+
   return results.empty();
+}
+
+tesseract_collision::ContactResultMap DescartesCollision::detailed_validate(const Eigen::Ref<const Eigen::VectorXd>& pos)
+{
+  // Happens in two phases:
+  // 1. Compute the transform of all objects
+  tesseract_common::TransformMap state = manip_->calcFwdKin(pos);
+
+  tesseract_collision::CollisionCheckConfig config(collision_check_config_);
+  config.contact_request.type = tesseract_collision::ContactTestType::FIRST;
+  tesseract_collision::ContactResultMap results =
+      tesseract_environment::checkTrajectoryState(*contact_manager_, state, config);
+
+  return results;
 }
 
 double DescartesCollision::distance(const Eigen::Ref<const Eigen::VectorXd>& pos)
