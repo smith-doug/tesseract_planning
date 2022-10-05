@@ -230,7 +230,7 @@ void DescartesDefaultPlanProfile<FloatType>::apply(DescartesProblem<FloatType>& 
   }
   prob.samplers.push_back(std::move(sampler));
 
-  if (index != 0)
+  if (index != 0 && index != 1)
   {
     // Add edge Evaluator
     if (edge_evaluator == nullptr)
@@ -253,6 +253,10 @@ void DescartesDefaultPlanProfile<FloatType>::apply(DescartesProblem<FloatType>& 
     {
       prob.edge_evaluators.push_back(edge_evaluator(prob));
     }
+  }
+  else if (index == 1)
+  {
+    prob.edge_evaluators.push_back(std::make_shared<descartes_light::EuclideanDistanceEdgeEvaluator<FloatType>>());
   }
 
   // Add state evaluator
@@ -277,7 +281,7 @@ void DescartesDefaultPlanProfile<FloatType>::apply(DescartesProblem<FloatType>& 
 
   std::vector<std::string> joint_names = prob.manip->getJointNames();
 
-  if (index != 0)
+  if (index != 0 && index != 1)
   {
     // Add edge Evaluator
     if (edge_evaluator == nullptr)
@@ -300,6 +304,10 @@ void DescartesDefaultPlanProfile<FloatType>::apply(DescartesProblem<FloatType>& 
     {
       prob.edge_evaluators.push_back(edge_evaluator(prob));
     }
+  }
+  else if (index == 1)
+  {
+    prob.edge_evaluators.push_back(std::make_shared<descartes_light::EuclideanDistanceEdgeEvaluator<FloatType>>());
   }
 
   if (state_evaluator != nullptr)

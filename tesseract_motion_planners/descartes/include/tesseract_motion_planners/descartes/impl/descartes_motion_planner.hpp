@@ -353,6 +353,7 @@ DescartesMotionPlanner<FloatType>::createProblem(const PlannerRequest& request) 
   // Transform plan instructions into descartes samplers
   for (std::size_t i = start_index; i < instructions_flat.size(); ++i)
   {
+    bool last_vertex = i == instructions_flat.size() - 1;
     const auto& instruction = instructions_flat[i].get();
     if (isPlanInstruction(instruction))
     {
@@ -426,13 +427,21 @@ DescartesMotionPlanner<FloatType>::createProblem(const PlannerRequest& request) 
           // Add intermediate points with path costs and constraints
           for (std::size_t p = 1; p < poses.size() - 1; ++p)
           {
-            cur_path_plan_profile->apply(*prob, poses[p], plan_instruction, composite_mi, index);
+//            cur_path_plan_profile->apply(*prob, poses[p], plan_instruction, composite_mi, index);
+            if (last_vertex)
+              cur_path_plan_profile->apply(*prob, poses[p], plan_instruction, composite_mi, 1);
+            else
+              cur_path_plan_profile->apply(*prob, poses[p], plan_instruction, composite_mi, index);
 
             ++index;
           }
 
           // Add final point with waypoint
-          cur_plan_profile->apply(*prob, cur_wp, plan_instruction, composite_mi, index);
+//          cur_plan_profile->apply(*prob, cur_wp, plan_instruction, composite_mi, index);
+          if (last_vertex)
+            cur_plan_profile->apply(*prob, cur_wp, plan_instruction, composite_mi, 1);
+          else
+            cur_plan_profile->apply(*prob, cur_wp, plan_instruction, composite_mi, index);
 
           ++index;
         }
@@ -468,7 +477,8 @@ DescartesMotionPlanner<FloatType>::createProblem(const PlannerRequest& request) 
           }
 
           // Add final point with waypoint
-          cur_plan_profile->apply(*prob, cur_position, plan_instruction, composite_mi, index);
+//          cur_plan_profile->apply(*prob, cur_position, plan_instruction, composite_mi, index);
+          cur_plan_profile->apply(*prob, cur_position, plan_instruction, composite_mi, 1);
 
           ++index;
         }
@@ -490,7 +500,11 @@ DescartesMotionPlanner<FloatType>::createProblem(const PlannerRequest& request) 
 
           // Add final point with waypoint costs and constraints
           /** @todo Should check that the joint names match the order of the manipulator */
-          cur_plan_profile->apply(*prob, cur_position, plan_instruction, composite_mi, index);
+//          cur_plan_profile->apply(*prob, cur_position, plan_instruction, composite_mi, index);
+          if (last_vertex)
+            cur_plan_profile->apply(*prob, cur_position, plan_instruction, composite_mi, 1);
+          else
+            cur_plan_profile->apply(*prob, cur_position, plan_instruction, composite_mi, index);
 
           ++index;
         }
@@ -504,7 +518,11 @@ DescartesMotionPlanner<FloatType>::createProblem(const PlannerRequest& request) 
 
           // Add final point with waypoint costs and constraints
           /** @todo Should check that the joint names match the order of the manipulator */
-          cur_plan_profile->apply(*prob, cur_wp, plan_instruction, composite_mi, index);
+//          cur_plan_profile->apply(*prob, cur_wp, plan_instruction, composite_mi, index);
+          if (last_vertex)
+            cur_plan_profile->apply(*prob, cur_wp, plan_instruction, composite_mi, 1);
+          else
+            cur_plan_profile->apply(*prob, cur_wp, plan_instruction, composite_mi, index);
 
           ++index;
         }
