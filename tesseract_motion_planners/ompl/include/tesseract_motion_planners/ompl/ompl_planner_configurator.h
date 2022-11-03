@@ -77,7 +77,9 @@ enum class OMPLPlannerType
   PRM = 10,
   PRMstar = 11,
   LazyPRMstar = 12,
-  SPARS = 13
+  SPARS = 13,
+  ProjEST = 14,
+  pSBL = 15
 };
 
 struct OMPLPlannerConfigurator
@@ -143,6 +145,58 @@ struct ESTConfigurator : public OMPLPlannerConfigurator
 
   /** @brief When close to goal select goal, with this probability. */
   double goal_bias = 0.05;
+
+  /** @brief Create the planner */
+  ompl::base::PlannerPtr create(ompl::base::SpaceInformationPtr si) const override;
+
+  OMPLPlannerType getType() const override;
+
+  /** @brief Serialize planner to xml */
+  tinyxml2::XMLElement* toXML(tinyxml2::XMLDocument& doc) const override;
+};
+
+struct ProjESTConfigurator : public OMPLPlannerConfigurator
+{
+  ProjESTConfigurator() = default;
+  ~ProjESTConfigurator() override = default;
+  ProjESTConfigurator(const ProjESTConfigurator&) = default;
+  ProjESTConfigurator& operator=(const ProjESTConfigurator&) = default;
+  ProjESTConfigurator(ProjESTConfigurator&&) = default;
+  ProjESTConfigurator& operator=(ProjESTConfigurator&&) = default;
+  ProjESTConfigurator(const tinyxml2::XMLElement& xml_element);
+
+  /** @brief Max motion added to tree */
+  double range = 0;
+
+  /** @brief When close to goal select goal, with this probability. */
+  double goal_bias = 0.05;
+
+  /** @brief Create the planner */
+  ompl::base::PlannerPtr create(ompl::base::SpaceInformationPtr si) const override;
+
+  OMPLPlannerType getType() const override;
+
+  /** @brief Serialize planner to xml */
+  tinyxml2::XMLElement* toXML(tinyxml2::XMLDocument& doc) const override;
+};
+
+struct pSBLConfigurator : public OMPLPlannerConfigurator
+{
+  pSBLConfigurator() = default;
+  ~pSBLConfigurator() override = default;
+  pSBLConfigurator(const pSBLConfigurator&) = default;
+  pSBLConfigurator& operator=(const pSBLConfigurator&) = default;
+  pSBLConfigurator(pSBLConfigurator&&) = default;
+  pSBLConfigurator& operator=(pSBLConfigurator&&) = default;
+  pSBLConfigurator(const tinyxml2::XMLElement& xml_element);
+
+  /** @brief Max motion added to tree */
+  double range = 0;
+
+  /** @brief When close to goal select goal, with this probability. */
+  //double goal_bias = 0.05;
+
+  uint thread_count;
 
   /** @brief Create the planner */
   ompl::base::PlannerPtr create(ompl::base::SpaceInformationPtr si) const override;
