@@ -220,7 +220,32 @@ tesseract_common::StatusCode OMPLMotionPlanner::solve(const PlannerRequest& requ
       {
         // Now try to simplify the trajectory to get it under the requested number of output states
         // The interpolate function only executes if the current number of states is less than the requested
-        p->simple_setup->simplifySolution();
+        auto& path = p->simple_setup->getSolutionPath();
+        auto original_size = path.getStateCount();
+        auto time_start = ompl::time::now();
+
+        if (p->fast_simplify_if_required)
+        {
+          auto max_steps = path.getStateCount() - num_output_states + 1;
+          p->simple_setup->getPathSimplifier()->reduceVertices(path, max_steps, 0);
+          if (path.getStateCount() > num_output_states)
+          {
+            CONSOLE_BRIDGE_logWarn("Quick simplification failed.  It produced %i states, but the maximum was %i.  "
+                                   "Running full simplifySolution()",
+                                   path.getStateCount(),
+                                   num_output_states);
+            p->simple_setup->simplifySolution();
+          }
+        }
+        else
+        {
+          p->simple_setup->simplifySolution();
+        }
+
+        auto simplify_time = ompl::time::seconds(ompl::time::now() - time_start);
+        CONSOLE_BRIDGE_logDebug(
+            "Simplify time: %f Original size: %i, reduced: %i", simplify_time, original_size, path.getStateCount());
+
         if (p->simple_setup->getSolutionPath().getStateCount() < num_output_states)
           p->simple_setup->getSolutionPath().interpolate(num_output_states);
       }

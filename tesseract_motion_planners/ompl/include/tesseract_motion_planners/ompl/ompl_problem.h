@@ -103,6 +103,15 @@ struct OMPLProblem
   bool simplify = false;
 
   /**
+   * @brief call reduceVertices instead of simplifySolution() if the path is too long
+   *
+   * simplifySolution can take a long time and will try to reduce the number of steps to be as small as possible.  It
+   * runs a bunch of other filters on the path as well that add to the time.  Enabling this will only run
+   * reduceVertices(), which should be enough.  It will run the full simplifySolution if that fails.
+   */
+  bool fast_simplify_if_required = true;
+
+  /**
    * @brief Number of states in the output trajectory
    *   Note: This is ignored if the simplify is set to true.
    *   Note: The trajectory can be longer if original trajectory is longer and reducing the number of states causes

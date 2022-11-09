@@ -40,6 +40,8 @@ TESSERACT_COMMON_IGNORE_WARNINGS_PUSH
 #include <ompl/geometric/planners/prm/PRMstar.h>
 #include <ompl/geometric/planners/prm/LazyPRMstar.h>
 #include <ompl/geometric/planners/prm/SPARS.h>
+#include <ompl/geometric/planners/est/ProjEST.h>
+#include <ompl/geometric/planners/sbl/pSBL.h>
 TESSERACT_COMMON_IGNORE_WARNINGS_POP
 
 #include <tesseract_motion_planners/ompl/ompl_planner_configurator.h>
@@ -145,6 +147,96 @@ tinyxml2::XMLElement* ESTConfigurator::toXML(tinyxml2::XMLDocument& doc) const
 
   return ompl_xml;
 }
+
+//############
+ProjESTConfigurator::ProjESTConfigurator(const tinyxml2::XMLElement& xml_element)
+{
+  // const tinyxml2::XMLElement* est_element = xml_element.FirstChildElement("ProjEST");
+  // const tinyxml2::XMLElement* range_element = est_element->FirstChildElement("Range");
+  // const tinyxml2::XMLElement* goal_bias_element = est_element->FirstChildElement("GoalBias");
+
+  // tinyxml2::XMLError status{ tinyxml2::XMLError::XML_SUCCESS };
+
+  // if (range_element != nullptr)
+  // {
+  //   std::string range_string;
+  //   status = tesseract_common::QueryStringText(range_element, range_string);
+  //   if (status != tinyxml2::XML_NO_ATTRIBUTE && status != tinyxml2::XML_SUCCESS)
+  //     throw std::runtime_error("OMPLConfigurator: EST: Error parsing Range string");
+
+  //   if (!tesseract_common::isNumeric(range_string))
+  //     throw std::runtime_error("OMPLConfigurator: EST: Range is not a numeric values.");
+
+  //   tesseract_common::toNumeric<double>(range_string, range);
+  // }
+
+  // if (goal_bias_element != nullptr)
+  // {
+  //   std::string goal_bias_string;
+  //   status = tesseract_common::QueryStringText(goal_bias_element, goal_bias_string);
+  //   if (status != tinyxml2::XML_NO_ATTRIBUTE && status != tinyxml2::XML_SUCCESS)
+  //     throw std::runtime_error("OMPLConfigurator: EST: Error parsing GoalBias string");
+
+  //   if (!tesseract_common::isNumeric(goal_bias_string))
+  //     throw std::runtime_error("OMPLConfigurator: EST: GoalBias is not a numeric values.");
+
+  //   tesseract_common::toNumeric<double>(goal_bias_string, goal_bias);
+  // }
+}
+
+ompl::base::PlannerPtr ProjESTConfigurator::create(ompl::base::SpaceInformationPtr si) const
+{
+  auto planner = std::make_shared<ompl::geometric::ProjEST>(si);
+  planner->setRange(range);
+  planner->setGoalBias(goal_bias);
+  return planner;
+}
+
+OMPLPlannerType ProjESTConfigurator::getType() const { return OMPLPlannerType::ProjEST; }
+
+tinyxml2::XMLElement* ProjESTConfigurator::toXML(tinyxml2::XMLDocument& doc) const
+{
+  tinyxml2::XMLElement* ompl_xml = doc.NewElement("EST");
+
+  tinyxml2::XMLElement* range_xml = doc.NewElement("Range");
+  range_xml->SetText(range);
+  ompl_xml->InsertEndChild(range_xml);
+
+  tinyxml2::XMLElement* goal_bias_xml = doc.NewElement("GoalBias");
+  goal_bias_xml->SetText(goal_bias);
+  ompl_xml->InsertEndChild(goal_bias_xml);
+
+  return ompl_xml;
+}
+
+
+tinyxml2::XMLElement* pSBLConfigurator::toXML(tinyxml2::XMLDocument& doc) const
+{
+  tinyxml2::XMLElement* ompl_xml = doc.NewElement("pSBL");
+
+  // tinyxml2::XMLElement* range_xml = doc.NewElement("Range");
+  // range_xml->SetText(range);
+  // ompl_xml->InsertEndChild(range_xml);
+
+  // tinyxml2::XMLElement* goal_bias_xml = doc.NewElement("GoalBias");
+  // goal_bias_xml->SetText(goal_bias);
+  // ompl_xml->InsertEndChild(goal_bias_xml);
+
+  return ompl_xml;
+}
+
+pSBLConfigurator::pSBLConfigurator(const tinyxml2::XMLElement& xml_element) {}
+
+ompl::base::PlannerPtr pSBLConfigurator::create(ompl::base::SpaceInformationPtr si) const
+{
+  auto planner = std::make_shared<ompl::geometric::pSBL>(si);
+  planner->setRange(range);
+  planner->setThreadCount(thread_count);
+
+  return planner;
+}
+
+OMPLPlannerType pSBLConfigurator::getType() const { return OMPLPlannerType::pSBL; }
 
 LBKPIECE1Configurator::LBKPIECE1Configurator(const tinyxml2::XMLElement& xml_element)
 {
