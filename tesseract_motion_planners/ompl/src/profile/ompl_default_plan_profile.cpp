@@ -55,6 +55,7 @@ OMPLDefaultPlanProfile::OMPLDefaultPlanProfile(const tinyxml2::XMLElement& xml_e
   const tinyxml2::XMLElement* planning_time_element = xml_element.FirstChildElement("PlanningTime");
   const tinyxml2::XMLElement* max_solutions_element = xml_element.FirstChildElement("MaxSolutions");
   const tinyxml2::XMLElement* simplify_element = xml_element.FirstChildElement("Simplify");
+  const tinyxml2::XMLElement* fast_simplify_element = xml_element.FirstChildElement("FastSimplifyIfRequired");
   const tinyxml2::XMLElement* optimize_element = xml_element.FirstChildElement("Optimize");
   const tinyxml2::XMLElement* planners_element = xml_element.FirstChildElement("Planners");
   //  const tinyxml2::XMLElement* collision_check_element = xml_element.FirstChildElement("CollisionCheck");
@@ -113,6 +114,13 @@ OMPLDefaultPlanProfile::OMPLDefaultPlanProfile(const tinyxml2::XMLElement& xml_e
       throw std::runtime_error("OMPLPlanProfile: Error parsing Simplify string");
   }
 
+  if (fast_simplify_element != nullptr)
+  {
+    status = fast_simplify_element->QueryBoolText(&fast_simplify_if_required);
+    if (status != tinyxml2::XML_NO_ATTRIBUTE && status != tinyxml2::XML_SUCCESS)
+      throw std::runtime_error("OMPLPlanProfile: Error parsing Simplify string");
+  }
+
   if (optimize_element != nullptr)
   {
     status = optimize_element->QueryBoolText(&optimize);
@@ -133,92 +141,77 @@ OMPLDefaultPlanProfile::OMPLDefaultPlanProfile(const tinyxml2::XMLElement& xml_e
 
       switch (type)
       {
-        case static_cast<int>(OMPLPlannerType::SBL):
-        {
+        case static_cast<int>(OMPLPlannerType::SBL): {
           SBLConfigurator::ConstPtr ompl_planner = std::make_shared<const SBLConfigurator>(*e);
           planners.push_back(ompl_planner);
           break;
         }
-        case static_cast<int>(OMPLPlannerType::EST):
-        {
+        case static_cast<int>(OMPLPlannerType::EST): {
           ESTConfigurator::ConstPtr ompl_planner = std::make_shared<const ESTConfigurator>(*e);
           planners.push_back(ompl_planner);
           break;
         }
-        case static_cast<int>(OMPLPlannerType::LBKPIECE1):
-        {
+        case static_cast<int>(OMPLPlannerType::LBKPIECE1): {
           LBKPIECE1Configurator::ConstPtr ompl_planner = std::make_shared<const LBKPIECE1Configurator>(*e);
           planners.push_back(ompl_planner);
           break;
         }
-        case static_cast<int>(OMPLPlannerType::BKPIECE1):
-        {
+        case static_cast<int>(OMPLPlannerType::BKPIECE1): {
           BKPIECE1Configurator::ConstPtr ompl_planner = std::make_shared<const BKPIECE1Configurator>(*e);
           planners.push_back(ompl_planner);
           break;
         }
-        case static_cast<int>(OMPLPlannerType::KPIECE1):
-        {
+        case static_cast<int>(OMPLPlannerType::KPIECE1): {
           KPIECE1Configurator::ConstPtr ompl_planner = std::make_shared<const KPIECE1Configurator>(*e);
           planners.push_back(ompl_planner);
           break;
         }
-        case static_cast<int>(OMPLPlannerType::BiTRRT):
-        {
+        case static_cast<int>(OMPLPlannerType::BiTRRT): {
           BiTRRTConfigurator::ConstPtr ompl_planner = std::make_shared<const BiTRRTConfigurator>(*e);
           planners.push_back(ompl_planner);
           break;
         }
-        case static_cast<int>(OMPLPlannerType::RRT):
-        {
+        case static_cast<int>(OMPLPlannerType::RRT): {
           RRTConfigurator::ConstPtr ompl_planner = std::make_shared<const RRTConfigurator>(*e);
           planners.push_back(ompl_planner);
           break;
         }
-        case static_cast<int>(OMPLPlannerType::RRTConnect):
-        {
+        case static_cast<int>(OMPLPlannerType::RRTConnect): {
           RRTConnectConfigurator::ConstPtr ompl_planner = std::make_shared<const RRTConnectConfigurator>(*e);
           planners.push_back(ompl_planner);
           break;
         }
-        case static_cast<int>(OMPLPlannerType::RRTstar):
-        {
+        case static_cast<int>(OMPLPlannerType::RRTstar): {
           RRTstarConfigurator::ConstPtr ompl_planner = std::make_shared<const RRTstarConfigurator>(*e);
           planners.push_back(ompl_planner);
           break;
         }
-        case static_cast<int>(OMPLPlannerType::TRRT):
-        {
+        case static_cast<int>(OMPLPlannerType::TRRT): {
           TRRTConfigurator::ConstPtr ompl_planner = std::make_shared<const TRRTConfigurator>(*e);
           planners.push_back(ompl_planner);
           break;
         }
-        case static_cast<int>(OMPLPlannerType::PRM):
-        {
+        case static_cast<int>(OMPLPlannerType::PRM): {
           PRMConfigurator::ConstPtr ompl_planner = std::make_shared<const PRMConfigurator>(*e);
           planners.push_back(ompl_planner);
           break;
         }
-        case static_cast<int>(OMPLPlannerType::PRMstar):
-        {
+        case static_cast<int>(OMPLPlannerType::PRMstar): {
           PRMstarConfigurator::ConstPtr ompl_planner = std::make_shared<const PRMstarConfigurator>(*e);
           planners.push_back(ompl_planner);
           break;
         }
-        case static_cast<int>(OMPLPlannerType::LazyPRMstar):
-        {
+        case static_cast<int>(OMPLPlannerType::LazyPRMstar): {
           LazyPRMstarConfigurator::ConstPtr ompl_planner = std::make_shared<const LazyPRMstarConfigurator>(*e);
           planners.push_back(ompl_planner);
           break;
         }
-        case static_cast<int>(OMPLPlannerType::SPARS):
-        {
+        case static_cast<int>(OMPLPlannerType::SPARS): {
           SPARSConfigurator::ConstPtr ompl_planner = std::make_shared<const SPARSConfigurator>(*e);
           planners.push_back(ompl_planner);
           break;
         }
-        default:
-        {
+        default: {
           throw std::runtime_error("Unsupported OMPL Planner type");
         }
       }
@@ -290,6 +283,7 @@ void OMPLDefaultPlanProfile::setup(OMPLProblem& prob) const
   prob.planning_time = planning_time;
   prob.max_solutions = max_solutions;
   prob.simplify = simplify;
+  prob.fast_simplify_if_required = fast_simplify_if_required;
   prob.optimize = optimize;
 
   prob.contact_checker->applyContactManagerConfig(collision_check_config.contact_manager_config);
@@ -665,6 +659,10 @@ tinyxml2::XMLElement* OMPLDefaultPlanProfile::toXML(tinyxml2::XMLDocument& doc) 
   tinyxml2::XMLElement* xml_simplify = doc.NewElement("Simplify");
   xml_simplify->SetText(simplify);
   xml_ompl->InsertEndChild(xml_simplify);
+
+  tinyxml2::XMLElement* xml_fast_simplify_if_required = doc.NewElement("FastSimplifyIfRequired");
+  xml_simplify->SetText(fast_simplify_if_required);
+  xml_ompl->InsertEndChild(xml_fast_simplify_if_required);
 
   tinyxml2::XMLElement* xml_optimize = doc.NewElement("Optimize");
   xml_optimize->SetText(optimize);

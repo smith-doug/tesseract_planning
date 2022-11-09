@@ -220,17 +220,32 @@ tesseract_common::StatusCode OMPLMotionPlanner::solve(const PlannerRequest& requ
       {
         // Now try to simplify the trajectory to get it under the requested number of output states
         // The interpolate function only executes if the current number of states is less than the requested
-
-        auto time_start = ompl::time::now();
-        auto &path = p->simple_setup->getSolutionPath();
+        auto& path = p->simple_setup->getSolutionPath();
         auto original_size = path.getStateCount();
-        // auto max_steps = path.getStateCount() - num_output_states + 1;
-        p->simple_setup->getPathSimplifier()->reduceVertices(path, 0, 0, 0.1);
-        auto simplify_time = ompl::time::seconds(ompl::time::now() - time_start);
-        CONSOLE_BRIDGE_logError("Simplify time: %f Original size: %i, reduced: %i", simplify_time, original_size, path.getStateCount());
+        auto time_start = ompl::time::now();
 
-        
-        //p->simple_setup->simplifySolution(1.0);
+        if (p->fast_simplify_if_required)
+        {
+          auto max_steps = path.getStateCount() - num_output_states + 1;
+          p->simple_setup->getPathSimplifier()->reduceVertices(path, max_steps, 0);
+          if (path.getStateCount() > num_output_states)
+          {
+            CONSOLE_BRIDGE_logWarn("Quick simplification failed.  It produced %i states, but the maximum was %i.  "
+                                   "Running full simplifySolution()",
+                                   path.getStateCount(),
+                                   num_output_states);
+            p->simple_setup->simplifySolution();
+          }
+        }
+        else
+        {
+          p->simple_setup->simplifySolution();
+        }
+
+        auto simplify_time = ompl::time::seconds(ompl::time::now() - time_start);
+        CONSOLE_BRIDGE_logDebug(
+            "Simplify time: %f Original size: %i, reduced: %i", simplify_time, original_size, path.getStateCount());
+
         if (p->simple_setup->getSolutionPath().getStateCount() < num_output_states)
           p->simple_setup->getSolutionPath().interpolate(num_output_states);
       }

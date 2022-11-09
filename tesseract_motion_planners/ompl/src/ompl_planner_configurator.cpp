@@ -225,24 +225,18 @@ tinyxml2::XMLElement* pSBLConfigurator::toXML(tinyxml2::XMLDocument& doc) const
   return ompl_xml;
 }
 
-
-pSBLConfigurator::pSBLConfigurator(const tinyxml2::XMLElement& xml_element)
-{
-
-}
-
+pSBLConfigurator::pSBLConfigurator(const tinyxml2::XMLElement& xml_element) {}
 
 ompl::base::PlannerPtr pSBLConfigurator::create(ompl::base::SpaceInformationPtr si) const
 {
   auto planner = std::make_shared<ompl::geometric::pSBL>(si);
   planner->setRange(range);
-  planner->setThreadCount(thread_count); 
-  
+  planner->setThreadCount(thread_count);
+
   return planner;
 }
 
 OMPLPlannerType pSBLConfigurator::getType() const { return OMPLPlannerType::pSBL; }
-
 
 LBKPIECE1Configurator::LBKPIECE1Configurator(const tinyxml2::XMLElement& xml_element)
 {
