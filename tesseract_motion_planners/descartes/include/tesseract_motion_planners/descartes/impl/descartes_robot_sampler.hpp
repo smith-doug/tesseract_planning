@@ -215,6 +215,16 @@ std::vector<descartes_light::StateSample<FloatType>> DescartesRobotSampler<Float
   return samples;
 }
 
+template <typename FloatType>
+std::ostream& DescartesRobotSampler<FloatType>::format(std::ostream& out) const
+{
+  auto tr = this->target_pose_.translation();
+  auto rot = Eigen::Quaternion<double>(this->target_pose_.rotation());
+  out << "{ [x=" << tr.x() << ", y=" << tr.y() << ", z=" << tr.z() << "], [x=" << rot.x() << ", y=" << rot.y()
+      << ", z=" << rot.z() << ", w=" << rot.w() << "] }";
+  return out;
+}
+
 }  // namespace tesseract_planning
 
 #endif  // TESSERACT_MOTION_PLANNERS_DESCARTES_ROBOT_SAMPLER_HPP
