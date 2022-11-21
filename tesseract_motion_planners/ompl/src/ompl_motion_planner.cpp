@@ -30,6 +30,7 @@ TESSERACT_COMMON_IGNORE_WARNINGS_PUSH
 #include <ompl/base/goals/GoalState.h>
 #include <ompl/base/goals/GoalStates.h>
 #include <ompl/tools/multiplan/ParallelPlan.h>
+#include <ompl/geometric/PathGeometric.h>
 TESSERACT_COMMON_IGNORE_WARNINGS_POP
 
 #include <tesseract_environment/utils.h>
@@ -100,6 +101,71 @@ bool OMPLMotionPlanner::terminate()
 {
   CONSOLE_BRIDGE_logWarn("Termination of ongoing optimization is not implemented yet");
   return false;
+}
+
+
+bool customReduceVertices(ompl::geometric::PathGeometric& path, unsigned int maxSteps, unsigned int maxEmptySteps, double rangeRatio, uint desired_states, ompl::geometric::PathSimplifier &simplifier)
+{
+  using namespace ompl;
+  RNG rng_;
+  if (path.getStateCount() < 3)
+        return false;
+
+    if (maxSteps == 0)
+        maxSteps = path.getStateCount();
+
+    if (maxEmptySteps == 0)
+        maxEmptySteps = path.getStateCount();
+
+    bool result = false;
+    unsigned int nochange = 0;
+    const ompl::base::SpaceInformationPtr &si = path.getSpaceInformation();
+    std::vector<base::State *> &states = path.getStates();
+
+    if (si->checkMotion(states.front(), states.back()))
+    {
+        if (simplifier.freeStates())
+            for (std::size_t i = 2; i < states.size(); ++i)
+                si->freeState(states[i - 1]);
+        std::vector<base::State *> newStates(2);
+        newStates[0] = states.front();
+        newStates[1] = states.back();
+        states.swap(newStates);
+        result = true;
+    }
+    else
+        for (unsigned int i = 0; i < maxSteps && nochange < maxEmptySteps && states.size() > desired_states; ++i, ++nochange)
+        {
+            int count = states.size();
+            int maxN = count - 1;
+            int range = 1 + (int)(floor(0.5 + (double)count * rangeRatio));
+
+            int p1 = rng_.uniformInt(0, maxN);
+            int p2 = rng_.uniformInt(std::max(p1 - range, 0), std::min(maxN, p1 + range));
+            if (abs(p1 - p2) < 2)
+            {
+                if (p1 < maxN - 1)
+                    p2 = p1 + 2;
+                else if (p1 > 1)
+                    p2 = p1 - 2;
+                else
+                    continue;
+            }
+
+            if (p1 > p2)
+                std::swap(p1, p2);
+
+            if (si->checkMotion(states[p1], states[p2]))
+            {
+                if (simplifier.freeStates())
+                    for (int j = p1 + 1; j < p2; ++j)
+                        si->freeState(states[j]);
+                states.erase(states.begin() + p1 + 1, states.begin() + p2);
+                nochange = 0;
+                result = true;
+            }
+        }
+    return result;
 }
 
 tesseract_common::StatusCode OMPLMotionPlanner::solve(const PlannerRequest& request,
@@ -227,7 +293,8 @@ tesseract_common::StatusCode OMPLMotionPlanner::solve(const PlannerRequest& requ
         if (p->fast_simplify_if_required)
         {
           auto max_steps = path.getStateCount() - num_output_states + 1;
-          p->simple_setup->getPathSimplifier()->reduceVertices(path, max_steps, 0);
+          customReduceVertices(path, 0, 0, 0.1, num_output_states, *p->simple_setup->getPathSimplifier());
+          //p->simple_setup->getPathSimplifier()->reduceVertices(path, max_steps, 0);
           if (path.getStateCount() > num_output_states)
           {
             CONSOLE_BRIDGE_logWarn("Quick simplification failed.  It produced %i states, but the maximum was %i.  "
