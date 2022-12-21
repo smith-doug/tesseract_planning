@@ -9,7 +9,9 @@ target_link_libraries(
          tesseract::tesseract_common
          tesseract::tesseract_command_language
          console_bridge::console_bridge
-         Eigen3::Eigen)
+         Eigen3::Eigen
+         OpenMP::OpenMP_CXX)
+
 target_compile_options(${PROJECT_NAME}_core PRIVATE ${TESSERACT_COMPILE_OPTIONS_PRIVATE})
 target_compile_options(${PROJECT_NAME}_core PUBLIC ${TESSERACT_COMPILE_OPTIONS_PUBLIC})
 target_compile_definitions(${PROJECT_NAME}_core PUBLIC ${TESSERACT_COMPILE_DEFINITIONS})

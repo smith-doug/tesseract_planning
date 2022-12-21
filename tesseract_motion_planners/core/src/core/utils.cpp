@@ -39,6 +39,9 @@ TESSERACT_COMMON_IGNORE_WARNINGS_POP
 #include <tesseract_command_language/utils/utils.h>
 #include <tesseract_motion_planners/core/utils.h>
 
+#include <omp.h>
+#include <algorithm>
+
 namespace tesseract_planning
 {
 Eigen::Isometry3d calcPose(const Waypoint& wp,
@@ -439,7 +442,7 @@ bool contactCheckProgram(std::vector<tesseract_collision::ContactResultMap>& con
                              "ContactManager type (Discrete)");
 
   manager.applyContactManagerConfig(config.contact_manager_config);
-  bool found = false;
+  volatile bool found = false;
 
   // Flatten results
   std::vector<std::reference_wrapper<const Instruction>> mi = flatten(program, moveFilter);
@@ -455,6 +458,29 @@ bool contactCheckProgram(std::vector<tesseract_collision::ContactResultMap>& con
     assert(config.longest_valid_segment_length > 0);
 
     contacts.resize(mi.size());
+
+    long num_threads = omp_get_max_threads() / 2;
+    auto threads_str = std::getenv("CONTACT_MANAGER_THREADS");
+    if (threads_str != NULL)
+    {
+      try
+      {
+        num_threads = std::stol(threads_str);
+      }
+      catch (const std::exception& e)
+      {
+      }
+    }
+    if (console_bridge::getLogLevel() == console_bridge::LogLevel::CONSOLE_BRIDGE_LOG_DEBUG)
+      std::cout << "CONTACT_MANAGER_THREADS: " << num_threads << std::endl;
+
+    std::vector<tesseract_collision::DiscreteContactManager::Ptr> contact_manager(
+        static_cast<std::size_t>(num_threads));
+    for (int i = 0; i < num_threads; i++)
+    {
+      contact_manager[i] = manager.clone();
+    }
+
     for (std::size_t iStep = 0; iStep < mi.size(); ++iStep)
     {
       tesseract_collision::ContactResultMap& segment_results = contacts[static_cast<size_t>(iStep)];
@@ -480,28 +506,46 @@ bool contactCheckProgram(std::vector<tesseract_collision::ContactResultMap>& con
         tesseract_collision::ContactTrajectoryStepResults step_contacts(
             iStep + 1, swp0.position, swp1->position, static_cast<int>(subtraj.rows()));
 
+// This section was easier to make parallel.  The above logic that checks longest_valid_segment_length for each wp would
+// have to be done and stored separately to be able to loop over all required segments.  Maybe check the small ones
+// first and if that passes do the remainder?
+#pragma omp parallel for num_threads(num_threads)
         for (int iSubStep = 0; iSubStep < subtraj.rows() - 1; ++iSubStep)
         {
+          const int tn = omp_get_thread_num();
+          if (found && (config.contact_request.type == tesseract_collision::ContactTestType::FIRST))
+            continue;
+
           tesseract_collision::ContactTrajectorySubstepResults substep_contacts(iSubStep + 1, subtraj.row(iSubStep));
 
           tesseract_scene_graph::SceneState state = state_solver.getState(swp0.joint_names, subtraj.row(iSubStep));
-          tesseract_collision::ContactResultMap sub_segment_results =
-              tesseract_environment::checkTrajectoryState(manager, state.link_transforms, config);
+          tesseract_collision::ContactResultMap sub_segment_results = tesseract_environment::checkTrajectoryState(
+              *contact_manager[tn], state.link_transforms, config.contact_request);
           if (!sub_segment_results.empty())
           {
-            found = true;
-            tesseract_environment::processInterpolatedSubSegmentCollisionResults(segment_results,
-                                                                                 sub_segment_results,
-                                                                                 iSubStep,
-                                                                                 static_cast<int>(subtraj.rows() - 1),
-                                                                                 manager.getActiveCollisionObjects(),
-                                                                                 true);
-          }
-          substep_contacts.contacts = sub_segment_results;
-          step_contacts.substeps[static_cast<size_t>(iSubStep)] = substep_contacts;
+#pragma omp critical
+            {
+              // Only process from the first thread
+              // Is this necessary or wise?  step_contacts is preallocated so it should be fine, even without critical
+              if (!found)
+              {
+                found = true;
 
-          if (found && (config.contact_request.type == tesseract_collision::ContactTestType::FIRST))
-            break;
+                tesseract_environment::processInterpolatedSubSegmentCollisionResults(
+                    segment_results,
+                    sub_segment_results,
+                    iSubStep,
+                    static_cast<int>(subtraj.rows() - 1),
+                    contact_manager[tn]->getActiveCollisionObjects(),
+                    true);
+                substep_contacts.contacts = sub_segment_results;
+                step_contacts.substeps[static_cast<size_t>(iSubStep)] = substep_contacts;
+              }
+            }
+          }
+
+          // if (found && (config.contact_request.type == tesseract_collision::ContactTestType::FIRST))
+          //  break;
         }
 
         traj_contacts.steps[static_cast<size_t>(iStep)] = step_contacts;
