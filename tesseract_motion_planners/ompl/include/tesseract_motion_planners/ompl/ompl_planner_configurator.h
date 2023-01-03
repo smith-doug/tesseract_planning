@@ -480,7 +480,7 @@ struct PRMstarConfigurator : public OMPLPlannerConfigurator
   PRMstarConfigurator& operator=(const PRMstarConfigurator&) = default;
   PRMstarConfigurator(PRMstarConfigurator&&) = default;
   PRMstarConfigurator& operator=(PRMstarConfigurator&&) = default;
-  PRMstarConfigurator(const tinyxml2::XMLElement& xml_element);
+  PRMstarConfigurator(const tinyxml2::XMLElement& xml_element); 
 
   /** @brief Create the planner */
   ompl::base::PlannerPtr create(ompl::base::SpaceInformationPtr si) const override;
@@ -500,6 +500,9 @@ struct LazyPRMstarConfigurator : public OMPLPlannerConfigurator
   LazyPRMstarConfigurator(LazyPRMstarConfigurator&&) = default;
   LazyPRMstarConfigurator& operator=(LazyPRMstarConfigurator&&) = default;
   LazyPRMstarConfigurator(const tinyxml2::XMLElement& xml_element);
+
+  /** @brief Max motion added to tree */
+  double range = 0;
 
   /** @brief Create the planner */
   ompl::base::PlannerPtr create(ompl::base::SpaceInformationPtr si) const override;

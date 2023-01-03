@@ -1053,7 +1053,9 @@ LazyPRMstarConfigurator::LazyPRMstarConfigurator(const tinyxml2::XMLElement&) {}
 
 ompl::base::PlannerPtr LazyPRMstarConfigurator::create(ompl::base::SpaceInformationPtr si) const
 {
-  return std::make_shared<ompl::geometric::LazyPRMstar>(si);
+  auto planner = std::make_shared<ompl::geometric::LazyPRMstar>(si);
+  planner->setRange(range);
+  return planner;
 }
 
 OMPLPlannerType LazyPRMstarConfigurator::getType() const { return OMPLPlannerType::LazyPRMstar; }

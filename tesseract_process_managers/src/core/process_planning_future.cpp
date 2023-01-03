@@ -33,6 +33,7 @@ TESSERACT_COMMON_IGNORE_WARNINGS_PUSH
 #include <boost/serialization/shared_ptr.hpp>
 TESSERACT_COMMON_IGNORE_WARNINGS_POP
 
+#include <iostream>
 #include <tesseract_process_managers/core/process_planning_future.h>
 
 namespace tesseract_planning
@@ -52,7 +53,17 @@ bool ProcessPlanningFuture::ready() const
   return (process_future.wait_for(std::chrono::seconds(0)) == std::future_status::ready);
 }
 
-void ProcessPlanningFuture::wait() const { process_future.wait(); }
+void ProcessPlanningFuture::wait() const
+{
+  if (valid())
+  {
+    process_future.wait();
+  }
+  else
+  {
+    std::cout << "############## void ProcessPlanningFuture::wait() const: future was not ready!" << std::endl;
+  }
+}
 
 std::future_status ProcessPlanningFuture::waitFor(const std::chrono::duration<double>& duration) const
 {
