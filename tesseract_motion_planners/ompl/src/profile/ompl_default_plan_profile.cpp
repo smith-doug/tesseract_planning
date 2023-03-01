@@ -604,7 +604,9 @@ void OMPLDefaultPlanProfile::applyStartStates(OMPLProblem& prob,
     // This is required because collision checking happens in motion validators now
     // instead of the isValid function to avoid unnecessary collision checks.
     tesseract_collision::ContactResultMap contact_map;
-    if (checkStateInCollision(prob, joint_waypoint, contact_map))
+
+    volatile bool state_in_col = checkStateInCollision(prob, joint_waypoint, contact_map);
+    if (state_in_col)
     {
       CONSOLE_BRIDGE_logError("In OMPLPlannerFreespaceConfig: Start state is in collision");
       for (const auto& contact_vec : contact_map)
@@ -619,6 +621,27 @@ void OMPLDefaultPlanProfile::applyStartStates(OMPLProblem& prob,
       start_state[i] = joint_waypoint[i];
 
     prob.simple_setup->addStartState(start_state);
+
+    if (state_in_col)
+    {
+      volatile double start_dist = 0.01;
+      volatile double end_dist = 0.0;
+      volatile int attempts = 20;
+      bool fixed_states =
+          prob.simple_setup->getProblemDefinition()->fixInvalidInputStates(start_dist, end_dist, attempts);
+      if (fixed_states)
+        CONSOLE_BRIDGE_logWarn("In OMPLDefaultPlanProfile::applyStartStates: Might have fixed something");
+      else
+        CONSOLE_BRIDGE_logWarn("In OMPLDefaultPlanProfile::applyStartStates: Fix probably failed?");
+
+      prob.simple_setup->print();
+    }
+
+    // auto pdef = prob.simple_setup->getProblemDefinition();
+    // for(int i = 0; i < pdef->getStartStateCount(); i++)
+    // {
+
+    // }
   }
 }
 
