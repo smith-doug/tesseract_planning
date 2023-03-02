@@ -576,7 +576,7 @@ void OMPLDefaultPlanProfile::applyStartStates(OMPLProblem& prob,
     }
   }
 }
-
+bool fix_invalid_states = false;
 void OMPLDefaultPlanProfile::applyStartStates(OMPLProblem& prob,
                                               const Eigen::VectorXd& joint_waypoint,
                                               const Instruction& /*parent_instruction*/,
@@ -586,6 +586,10 @@ void OMPLDefaultPlanProfile::applyStartStates(OMPLProblem& prob,
 {
   const auto dof = prob.manip->numJoints();
   tesseract_common::KinematicLimits limits = prob.manip->getLimits();
+
+  auto old_level = ompl::msg::getLogLevel();
+  if (fix_invalid_states)
+    ompl::msg::setLogLevel(ompl::msg::LOG_DEBUG);
 
   if (prob.state_space == OMPLProblemStateSpace::REAL_STATE_SPACE)
   {
@@ -622,7 +626,7 @@ void OMPLDefaultPlanProfile::applyStartStates(OMPLProblem& prob,
 
     prob.simple_setup->addStartState(start_state);
 
-    if (state_in_col)
+    if (state_in_col && fix_invalid_states)
     {
       volatile double start_dist = 0.01;
       volatile double end_dist = 0.0;
@@ -643,6 +647,7 @@ void OMPLDefaultPlanProfile::applyStartStates(OMPLProblem& prob,
 
     // }
   }
+  ompl::msg::setLogLevel(old_level);
 }
 
 tinyxml2::XMLElement* OMPLDefaultPlanProfile::toXML(tinyxml2::XMLDocument& doc) const
