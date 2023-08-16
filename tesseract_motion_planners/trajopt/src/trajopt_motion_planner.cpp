@@ -130,11 +130,11 @@ tesseract_common::StatusCode TrajOptMotionPlanner::solve(const PlannerRequest& r
   // Construct Problem
   trajopt::TrajOptProb::Ptr problem = trajopt::ConstructProblem(*pci);
 
-  // Set Log Level
-  if (verbose)
-    util::gLogLevel = util::LevelInfo;
-  else
-    util::gLogLevel = util::LevelWarn;
+  // // Set Log Level
+  // if (verbose)
+  //   util::gLogLevel = util::LevelInfo;
+  // else
+  //   util::gLogLevel = util::LevelWarn;
 
   // Create optimizer
   sco::BasicTrustRegionSQP opt(problem);
