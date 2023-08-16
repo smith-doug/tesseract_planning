@@ -571,8 +571,9 @@ void OMPLDefaultPlanProfile::applyStartStates(OMPLProblem& prob,
             CONSOLE_BRIDGE_logError(("Solution: " + std::to_string(i) + "  Links: " + contact.link_names[0] + ", " +
                                      contact.link_names[1] + "  Distance: " + std::to_string(contact.distance))
                                         .c_str());
-      throw std::runtime_error("In OMPLPlannerFreespaceConfig: All start states are either in collision or outside "
-                               "limits");
+
+      throw std::runtime_error("In OMPLPlannerFreespaceConfig(cartesian wp): All start states are either in "
+                               "collision or outside limits");
     }
   }
 }
