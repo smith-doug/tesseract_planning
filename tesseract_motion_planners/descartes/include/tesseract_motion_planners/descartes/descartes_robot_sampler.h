@@ -66,7 +66,7 @@ public:
 
   std::vector<descartes_light::StateSample<FloatType>> sample() const override;
 
-  virtual std::ostream& format(std::ostream& out) const override;
+  virtual std::ostream& format(std::ostream& out) const;
 
 private:
   /** @brief The target pose working frame */
