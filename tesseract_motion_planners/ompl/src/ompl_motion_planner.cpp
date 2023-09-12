@@ -103,70 +103,75 @@ bool OMPLMotionPlanner::terminate()
   return false;
 }
 
+// bool customReduceVertices(ompl::geometric::PathGeometric& path,
+//                           unsigned int maxSteps,
+//                           unsigned int maxEmptySteps,
+//                           double rangeRatio,
+//                           uint desired_states,
+//                           ompl::geometric::PathSimplifier& simplifier)
+//{
+//   using namespace ompl;
+//   RNG rng_;
+//   if (path.getStateCount() < 3)
+//     return false;
 
-bool customReduceVertices(ompl::geometric::PathGeometric& path, unsigned int maxSteps, unsigned int maxEmptySteps, double rangeRatio, uint desired_states, ompl::geometric::PathSimplifier &simplifier)
-{
-  using namespace ompl;
-  RNG rng_;
-  if (path.getStateCount() < 3)
-        return false;
+//  if (maxSteps == 0)
+//    maxSteps = path.getStateCount();
 
-    if (maxSteps == 0)
-        maxSteps = path.getStateCount();
+//  if (maxEmptySteps == 0)
+//    maxEmptySteps = path.getStateCount();
 
-    if (maxEmptySteps == 0)
-        maxEmptySteps = path.getStateCount();
+//  bool result = false;
+//  unsigned int nochange = 0;
+//  const ompl::base::SpaceInformationPtr& si = path.getSpaceInformation();
+//  std::vector<base::State*>& states = path.getStates();
 
-    bool result = false;
-    unsigned int nochange = 0;
-    const ompl::base::SpaceInformationPtr &si = path.getSpaceInformation();
-    std::vector<base::State *> &states = path.getStates();
+//  if (si->checkMotion(states.front(), states.back()))
+//  {
+//    if (simplifier.freeStates())
+//      for (std::size_t i = 2; i < states.size(); ++i)
+//        si->freeState(states[i - 1]);
+//    std::vector<base::State*> newStates(2);
+//    newStates[0] = states.front();
+//    newStates[1] = states.back();
+//    states.swap(newStates);
+//    result = true;
+//  }
+//  else
+//    for (unsigned int i = 0; i < maxSteps && nochange < maxEmptySteps && states.size() > desired_states;
+//         ++i, ++nochange)
+//    {
+//      int count = states.size();
+//      int maxN = count - 1;
+//      int range = 1 + (int)(floor(0.5 + (double)count * rangeRatio));
 
-    if (si->checkMotion(states.front(), states.back()))
-    {
-        if (simplifier.freeStates())
-            for (std::size_t i = 2; i < states.size(); ++i)
-                si->freeState(states[i - 1]);
-        std::vector<base::State *> newStates(2);
-        newStates[0] = states.front();
-        newStates[1] = states.back();
-        states.swap(newStates);
-        result = true;
-    }
-    else
-        for (unsigned int i = 0; i < maxSteps && nochange < maxEmptySteps && states.size() > desired_states; ++i, ++nochange)
-        {
-            int count = states.size();
-            int maxN = count - 1;
-            int range = 1 + (int)(floor(0.5 + (double)count * rangeRatio));
+//      int p1 = rng_.uniformInt(0, maxN);
+//      int p2 = rng_.uniformInt(std::max(p1 - range, 0), std::min(maxN, p1 + range));
+//      if (abs(p1 - p2) < 2)
+//      {
+//        if (p1 < maxN - 1)
+//          p2 = p1 + 2;
+//        else if (p1 > 1)
+//          p2 = p1 - 2;
+//        else
+//          continue;
+//      }
 
-            int p1 = rng_.uniformInt(0, maxN);
-            int p2 = rng_.uniformInt(std::max(p1 - range, 0), std::min(maxN, p1 + range));
-            if (abs(p1 - p2) < 2)
-            {
-                if (p1 < maxN - 1)
-                    p2 = p1 + 2;
-                else if (p1 > 1)
-                    p2 = p1 - 2;
-                else
-                    continue;
-            }
+//      if (p1 > p2)
+//        std::swap(p1, p2);
 
-            if (p1 > p2)
-                std::swap(p1, p2);
-
-            if (si->checkMotion(states[p1], states[p2]))
-            {
-                if (simplifier.freeStates())
-                    for (int j = p1 + 1; j < p2; ++j)
-                        si->freeState(states[j]);
-                states.erase(states.begin() + p1 + 1, states.begin() + p2);
-                nochange = 0;
-                result = true;
-            }
-        }
-    return result;
-}
+//      if (si->checkMotion(states[p1], states[p2]))
+//      {
+//        if (simplifier.freeStates())
+//          for (int j = p1 + 1; j < p2; ++j)
+//            si->freeState(states[j]);
+//        states.erase(states.begin() + p1 + 1, states.begin() + p2);
+//        nochange = 0;
+//        result = true;
+//      }
+//    }
+//  return result;
+//}
 
 tesseract_common::StatusCode OMPLMotionPlanner::solve(const PlannerRequest& request,
                                                       PlannerResponse& response,
@@ -286,37 +291,60 @@ tesseract_common::StatusCode OMPLMotionPlanner::solve(const PlannerRequest& requ
       {
         // Now try to simplify the trajectory to get it under the requested number of output states
         // The interpolate function only executes if the current number of states is less than the requested
-        auto& path = p->simple_setup->getSolutionPath();
-        auto original_size = path.getStateCount();
-        auto time_start = ompl::time::now();
-
-        if (p->fast_simplify_if_required)
-        {
-          auto max_steps = path.getStateCount() - num_output_states + 1;
-          customReduceVertices(path, 0, 0, 0.1, num_output_states, *p->simple_setup->getPathSimplifier());
-          //p->simple_setup->getPathSimplifier()->reduceVertices(path, max_steps, 0);
-          if (path.getStateCount() > num_output_states)
-          {
-            CONSOLE_BRIDGE_logWarn("Quick simplification failed.  It produced %i states, but the maximum was %i.  "
-                                   "Running full simplifySolution()",
-                                   path.getStateCount(),
-                                   num_output_states);
-            p->simple_setup->simplifySolution();
-          }
-        }
-        else
-        {
-          p->simple_setup->simplifySolution();
-        }
-
-        auto simplify_time = ompl::time::seconds(ompl::time::now() - time_start);
-        CONSOLE_BRIDGE_logDebug(
-            "Simplify time: %f Original size: %i, reduced: %i", simplify_time, original_size, path.getStateCount());
-
+        p->simple_setup->simplifySolution();
         if (p->simple_setup->getSolutionPath().getStateCount() < num_output_states)
           p->simple_setup->getSolutionPath().interpolate(num_output_states);
       }
     }
+
+    //    if (p->simplify)
+    //    {
+    //      p->simple_setup->simplifySolution();
+    //    }
+    //    else
+    //    {
+    //      // Interpolate the path if it shouldn't be simplified and there are currently fewer states than requested
+    //      auto num_output_states = static_cast<unsigned>(p->n_output_states);
+    //      if (p->simple_setup->getSolutionPath().getStateCount() < num_output_states)
+    //      {
+    //        p->simple_setup->getSolutionPath().interpolate(num_output_states);
+    //      }
+    //      else
+    //      {
+    //        // Now try to simplify the trajectory to get it under the requested number of output states
+    //        // The interpolate function only executes if the current number of states is less than the requested
+    //        auto& path = p->simple_setup->getSolutionPath();
+    //        auto original_size = path.getStateCount();
+    //        auto time_start = ompl::time::now();
+
+    //        if (p->fast_simplify_if_required)
+    //        {
+    //          auto max_steps = path.getStateCount() - num_output_states + 1;
+    //          //customReduceVertices(path, 0, 0, 0.1, num_output_states, *p->simple_setup->getPathSimplifier());
+    //          p->simple_setup->getPathSimplifier()->reduceVertices(path, max_steps, 0);
+    //          if (path.getStateCount() > num_output_states)
+    //          {
+    //            CONSOLE_BRIDGE_logWarn("Quick simplification failed.  It produced %i states, but the maximum was %i. "
+    //                                   "Running full simplifySolution()",
+    //                                   path.getStateCount(),
+    //                                   num_output_states);
+    //            p->simple_setup->simplifySolution();
+    //          }
+    //        }
+    //        else
+    //        {
+    //          p->simple_setup->simplifySolution();
+    //        }
+
+    //        auto simplify_time = ompl::time::seconds(ompl::time::now() - time_start);
+    //        CONSOLE_BRIDGE_logDebug(
+    //            "Simplify time: %f Original size: %i, reduced: %i", simplify_time, original_size,
+    //            path.getStateCount());
+
+    //        if (p->simple_setup->getSolutionPath().getStateCount() < num_output_states)
+    //          p->simple_setup->getSolutionPath().interpolate(num_output_states);
+    //      }
+    //    }
   }
 
   // Flatten the results to make them easier to process
