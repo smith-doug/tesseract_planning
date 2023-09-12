@@ -47,14 +47,14 @@ TESSERACT_COMMON_IGNORE_WARNINGS_POP
 
 namespace tesseract_planning
 {
-static void fit_cubic_spline(long n, const double dt[], const double x[], double x1[], double x2[]);  // NOLINT
+static void fit_cubic_spline(long n, const double dt[], const double x[], double x1[], double x2[]);    // NOLINT
 static void adjust_two_positions(long n,
-                                 const double dt[],  // NOLINT
-                                 double x[],         // NOLINT
-                                 double x1[],        // NOLINT
-                                 double x2[],        // NOLINT
-                                 double x2_i,        // NOLINT
-                                 double x2_f);       // NOLINT
+                                 const double dt[],                                                     // NOLINT
+                                 double x[],                                                            // NOLINT
+                                 double x1[],                                                           // NOLINT
+                                 double x2[],                                                           // NOLINT
+                                 double x2_i,                                                           // NOLINT
+                                 double x2_f);                                                          // NOLINT
 static void
 init_times(long n, double dt[], const double x[], const double max_velocity[], double min_velocity[]);  // NOLINT
 // static int fit_spline_and_adjust_times(const int n,
@@ -405,10 +405,10 @@ bool IterativeSplineParameterization::compute(
   std::vector<double> time_diff(static_cast<std::size_t>(num_points - 1), std::numeric_limits<double>::epsilon());
   for (unsigned int j = 0; j < trajectory.dof(); j++)
     init_times(static_cast<long>(num_points),
-               &time_diff[0],
-               &t2[j].positions_[0],
-               &t2[j].max_velocity_[0],
-               &t2[j].min_velocity_[0]);
+               time_diff.data(),
+               t2[j].positions_.data(),
+               t2[j].max_velocity_.data(),
+               t2[j].min_velocity_.data());
 
   // Stretch intervals until close to the bounds
   while (true)
@@ -423,19 +423,19 @@ bool IterativeSplineParameterization::compute(
       if (add_points)
       {
         adjust_two_positions(static_cast<int>(num_points),
-                             &time_diff[0],
-                             &t2[j].positions_[0],
-                             &t2[j].velocities_[0],
-                             &t2[j].accelerations_[0],
+                             time_diff.data(),
+                             t2[j].positions_.data(),
+                             t2[j].velocities_.data(),
+                             t2[j].accelerations_.data(),
                              t2[j].initial_acceleration_,
                              t2[j].final_acceleration_);
       }
 
       fit_cubic_spline(static_cast<int>(num_points),
-                       &time_diff[0],
-                       &t2[j].positions_[0],
-                       &t2[j].velocities_[0],
-                       &t2[j].accelerations_[0]);
+                       time_diff.data(),
+                       t2[j].positions_.data(),
+                       t2[j].velocities_.data(),
+                       t2[j].accelerations_.data());
       for (unsigned i = 0; i < num_points; i++)
       {
         const double acc = t2[j].accelerations_[i];
@@ -444,7 +444,7 @@ bool IterativeSplineParameterization::compute(
           atfactor = sqrt(acc / t2[j].max_acceleration_[i]);
         if (acc < t2[j].min_acceleration_[i])
           atfactor = sqrt(acc / t2[j].min_acceleration_[i]);
-        if (atfactor > 1.01)  // within 1%
+        if (atfactor > 1.01)                       // within 1%
           loop = 1;
         atfactor = (atfactor - 1.0) / 16.0 + 1.0;  // 1/16th
         if (i > 0)
@@ -457,7 +457,7 @@ bool IterativeSplineParameterization::compute(
     if (loop == 0)
       break;  // finished
 
-    // Stretch
+              // Stretch
     for (unsigned i = 0; i < num_points - 1; i++)
       time_diff[i] *= time_factor[i];
   }
@@ -504,30 +504,30 @@ bool IterativeSplineParameterization::compute(
   1st derivative (velocities), and 2nd derivative (accelerations).
   'Clamped' means the first derivative at the endpoints is specified.
 
-  Fitting a cubic spline involves solving a series of linear equations.
-  The general form for each segment is:
-    (tj-t_(j-1))*x"_(j-1) + 2*(t_(j+1)-t_(j-1))*x"j + (t_(j+1)-tj)*x"_j+1) =
-          (x_(j+1)-xj)/(t_(j+1)-tj) - (xj-x_(j-1))/(tj-t_(j-1))
-  And the first and last segment equations are clamped to specified values: x1_i and x1_f.
+Fitting a cubic spline involves solving a series of linear equations.
+The general form for each segment is:
+ (tj-t_(j-1))*x"_(j-1) + 2*(t_(j+1)-t_(j-1))*x"j + (t_(j+1)-tj)*x"_j+1) =
+       (x_(j+1)-xj)/(t_(j+1)-tj) - (xj-x_(j-1))/(tj-t_(j-1))
+And the first and last segment equations are clamped to specified values: x1_i and x1_f.
 
-  Represented in matrix form:
-  [ 2*(t1-t0)   (t1-t0)                              0              ][x0"]       [(x1-x0)/(t1-t0) - t1_i           ]
-  [ t1-t0       2*(t2-t0)   t2-t1                                   ][x1"]       [(x2-x1)/(t2-t1) - (x1-x0)/(t1-t0)]
-  [             t2-t1       2*(t3-t1)   t3-t2                       ][x2"] = 6 * [(x3-x2)/(t3/t2) - (x2-x1)/(t2-t1)]
-  [                       ...         ...         ...               ][...]       [...                              ]
-  [ 0                                    tN-t_(N-1)  2*(tN-t_(N-1)) ][xN"]       [t1_f - (xN-x_(N-1))/(tN-t_(N-1)) ]
+Represented in matrix form:
+[ 2*(t1-t0)   (t1-t0)                              0              ][x0"]       [(x1-x0)/(t1-t0) - t1_i           ]
+[ t1-t0       2*(t2-t0)   t2-t1                                   ][x1"]       [(x2-x1)/(t2-t1) - (x1-x0)/(t1-t0)]
+[             t2-t1       2*(t3-t1)   t3-t2                       ][x2"] = 6 * [(x3-x2)/(t3/t2) - (x2-x1)/(t2-t1)]
+[                       ...         ...         ...               ][...]       [...                              ]
+[ 0                                    tN-t_(N-1)  2*(tN-t_(N-1)) ][xN"]       [t1_f - (xN-x_(N-1))/(tN-t_(N-1)) ]
 
-  This matrix is tridiagonal, which can be solved solved in O(N) time
-  using the tridiagonal algorithm.
-  There is a forward propogation pass followed by a backsubstitution pass.
+This matrix is tridiagonal, which can be solved solved in O(N) time
+using the tridiagonal algorithm.
+There is a forward propogation pass followed by a backsubstitution pass.
 
-  n is the number of points
-  dt contains the time difference between each point (size=n-1)
-  x  contains the positions                          (size=n)
-  x1 contains the 1st derivative (velocities)        (size=n)
-     x1[0] and x1[n-1] MUST be specified.
-  x2 contains the 2nd derivative (accelerations)     (size=n)
-  x1 and x2 are filled in by the algorithm.
+n is the number of points
+dt contains the time difference between each point (size=n-1)
+x  contains the positions                          (size=n)
+x1 contains the 1st derivative (velocities)        (size=n)
+  x1[0] and x1[n-1] MUST be specified.
+x2 contains the 2nd derivative (accelerations)     (size=n)
+x1 and x2 are filled in by the algorithm.
 */
 // NOLINTNEXTLINE
 static void fit_cubic_spline(const long n, const double dt[], const double x[], double x1[], double x2[])
@@ -573,7 +573,7 @@ static void fit_cubic_spline(const long n, const double dt[], const double x[], 
   This involves fitting the spline twice,
   then solving for the specified value.
 
-  x2_i and x2_f are the (initial and final) 2nd derivative at 0 and N-1
+x2_i and x2_f are the (initial and final) 2nd derivative at 0 and N-1
 */
 
 static void adjust_two_positions(const long n,
@@ -634,18 +634,18 @@ static void init_times(long n, double dt[], const double x[], const double max_v
   If bounds not met (time adjustments made), slightly increase the
   surrounding time intervals and return 1.
 
-  n is the number of points
-  dt contains the time difference between each point (size=n-1)
-  x  contains the positions                          (size=n)
-  x1 contains the 1st derivative (velocities)        (size=n)
-     x1[0] and x1[n-1] MUST be specified.
-  x2 contains the 2nd derivative (accelerations)     (size=n)
-  max_velocity is the max velocity for this joint.
-  min_velocity is the min velocity for this joint.
-  max_acceleration is the max acceleration for this joint.
-  min_acceleration is the min acceleration for this joint.
-  tfactor is the time adjustment (multiplication) factor.
-  x1 and x2 are filled in by the algorithm.
+n is the number of points
+dt contains the time difference between each point (size=n-1)
+x  contains the positions                          (size=n)
+x1 contains the 1st derivative (velocities)        (size=n)
+  x1[0] and x1[n-1] MUST be specified.
+x2 contains the 2nd derivative (accelerations)     (size=n)
+max_velocity is the max velocity for this joint.
+min_velocity is the min velocity for this joint.
+max_acceleration is the max acceleration for this joint.
+min_acceleration is the min acceleration for this joint.
+tfactor is the time adjustment (multiplication) factor.
+x1 and x2 are filled in by the algorithm.
 */
 
 // static int fit_spline_and_adjust_times(const int n,
@@ -747,14 +747,14 @@ void globalAdjustment(std::vector<SingleJointTrajectory>& t2,
   for (std::size_t j = 0; j < static_cast<std::size_t>(num_joints); j++)
   {
     double tfactor = global_adjustment_factor(num_points,
-                                              &time_diff[0],
-                                              &t2[j].positions_[0],
-                                              &t2[j].velocities_[0],
-                                              &t2[j].accelerations_[0],
-                                              &t2[j].max_velocity_[0],
-                                              &t2[j].min_velocity_[0],
-                                              &t2[j].max_acceleration_[0],
-                                              &t2[j].min_acceleration_[0]);
+                                              time_diff.data(),
+                                              t2[j].positions_.data(),
+                                              t2[j].velocities_.data(),
+                                              t2[j].accelerations_.data(),
+                                              t2[j].max_velocity_.data(),
+                                              t2[j].min_velocity_.data(),
+                                              t2[j].max_acceleration_.data(),
+                                              t2[j].min_acceleration_.data());
     if (tfactor > gtfactor)
       gtfactor = tfactor;
   }
@@ -765,7 +765,8 @@ void globalAdjustment(std::vector<SingleJointTrajectory>& t2,
 
   for (std::size_t j = 0; j < static_cast<std::size_t>(num_joints); j++)
   {
-    fit_cubic_spline(num_points, &time_diff[0], &t2[j].positions_[0], &t2[j].velocities_[0], &t2[j].accelerations_[0]);
+    fit_cubic_spline(
+        num_points, time_diff.data(), t2[j].positions_.data(), t2[j].velocities_.data(), t2[j].accelerations_.data());
   }
 }
 }  // namespace tesseract_planning
