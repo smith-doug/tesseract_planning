@@ -212,6 +212,7 @@ tesseract_common::StatusCode OMPLMotionPlanner::solve(const PlannerRequest& requ
   /// @todo: Need to expand this to support multiple motion plans leveraging taskflow
   for (auto& p : problem)
   {
+    p->simple_setup->setup();
     auto parallel_plan = std::make_shared<ompl::tools::ParallelPlan>(p->simple_setup->getProblemDefinition());
 
     for (const auto& planner : p->planners)
