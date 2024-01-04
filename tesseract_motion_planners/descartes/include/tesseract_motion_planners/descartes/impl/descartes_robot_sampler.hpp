@@ -75,9 +75,11 @@ std::vector<descartes_light::StateSample<FloatType>> DescartesRobotSampler<Float
   bool found_ik_sol = false;
   std::stringstream error_string_stream;
 
+  auto console_bridge_loglevel = console_bridge::getLogLevel();
+
   // Generate the IK solutions for those poses
   std::vector<descartes_light::StateSample<FloatType>> samples;
-//  for (const auto& pose : target_poses)
+  //  for (const auto& pose : target_poses)
   for (std::size_t i = 0; i < target_poses.size(); i++)
   {
     const auto& pose = target_poses[i];
@@ -111,7 +113,7 @@ std::vector<descartes_light::StateSample<FloatType>> DescartesRobotSampler<Float
       }
       else if (!allow_collision_)
       {
-        if (console_bridge::getLogLevel() == console_bridge::LogLevel::CONSOLE_BRIDGE_LOG_DEBUG)
+        if (console_bridge_loglevel == console_bridge::LogLevel::CONSOLE_BRIDGE_LOG_DEBUG)
         {
           tesseract_collision::ContactResultMap coll_results = collision_->detailed_validate(sol);
           if (!coll_results.empty())
@@ -135,10 +137,12 @@ std::vector<descartes_light::StateSample<FloatType>> DescartesRobotSampler<Float
       }
     }
 
-    if (console_bridge::getLogLevel() == console_bridge::LogLevel::CONSOLE_BRIDGE_LOG_DEBUG)
+    if (console_bridge_loglevel == console_bridge::LogLevel::CONSOLE_BRIDGE_LOG_DEBUG)
     {
-      error_string_stream << "For sample " << i << " the target position is:" << std::endl << target_pose.matrix() << std::endl;
-      error_string_stream << ik_solutions.size() << " IK solutions were found, with a collision summary of:" << std::endl;
+      error_string_stream << "For sample " << i << " the target position is:" << std::endl
+                          << target_pose.matrix() << std::endl;
+      error_string_stream << ik_solutions.size()
+                          << " IK solutions were found, with a collision summary of:" << std::endl;
       error_string_stream << traj_contacts.trajectoryCollisionResultsTable().str();
     }
   }
@@ -154,11 +158,13 @@ std::vector<descartes_light::StateSample<FloatType>> DescartesRobotSampler<Float
     else
       ss << "All IK solutions found were in collision or invalid. ";
     ss << target_poses.size() << " samples tried from target pose" << std::endl;
-    ss << "\ttarget pose translation: (" << target_pose_.translation().x() << ", " << target_pose_.translation().y() << ", " << target_pose_.translation().z() << ")" << std::endl;;
+    ss << "\ttarget pose translation: (" << target_pose_.translation().x() << ", " << target_pose_.translation().y()
+       << ", " << target_pose_.translation().z() << ")" << std::endl;
+    ;
     ss << "\tworking frame: '" << target_working_frame_ << "', tcp: '" << tcp_frame_ << "'" << std::endl;
     if (found_ik_sol)
       ss << error_string_stream.str();
-    if (console_bridge::getLogLevel() == console_bridge::LogLevel::CONSOLE_BRIDGE_LOG_DEBUG)
+    if (console_bridge_loglevel == console_bridge::LogLevel::CONSOLE_BRIDGE_LOG_DEBUG)
       std::cout << ss.str();
     return samples;
   }
